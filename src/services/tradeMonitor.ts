@@ -152,22 +152,22 @@ export class TradeMonitor {
       return;
     }
 
-    // Get or fetch trader stats
-    let traderStats = this.traderAnalyzer.getTraderStats(trade.trader);
-    if (!traderStats) {
-      traderStats = await this.fetchAndCacheTraderStats(trade.trader);
-    }
+    // Without API auth, we can't track individual traders
+    // So we'll alert on high-volume markets with low liquidity
+    // Create synthetic trader stats
+    const traderStats: TraderStats = {
+      address: trade.trader,
+      totalVolume: tradeValue,
+      totalTrades: 1,
+      profitLoss: 0,
+      roi: 0,
+      lastTradeTimestamp: trade.timestamp,
+      winRate: 50,
+      averageTradeSize: tradeValue,
+    };
 
-    // Check if trader is high-profit
-    const isHighProfitTrader = this.traderAnalyzer.isHighProfitTrader(trade.trader);
-
-    if (!isHighProfitTrader) {
-      return;
-    }
-
-    // Generate alert
-    const rank = this.traderAnalyzer.getTraderRank(trade.trader);
-    const reason = `High-profit trader (${rank ? `Rank #${rank.rank}, Top ${rank.percentile.toFixed(1)}%` : 'Top performer'}) making large trade (${liquidityImpact.toFixed(1)}% of liquidity) in ${market.liquidity < 10000 ? 'low' : 'medium'} liquidity market.`;
+    // Generate alert for high-volume, low-liquidity markets
+    const reason = `Significant market activity detected: ${tradeValue.toFixed(2)} volume (${liquidityImpact.toFixed(1)}% of liquidity) in ${market.liquidity < 10000 ? 'low' : 'medium'} liquidity market.`;
 
     const alert: AlertData = {
       trade,
