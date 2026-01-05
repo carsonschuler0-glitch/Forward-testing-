@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Polymarket Whale Tracker Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🐋 Polymarket Whale Tracker</h1>
+            <div class="status-bar">
+                <div class="status-item">
+                    <span class="label">Bot Status:</span>
+                    <span id="bot-status" class="status-badge running">Running</span>
+                </div>
+                <div class="status-item">
+                    <span class="label">Uptime:</span>
+                    <span id="uptime">--</span>
+                </div>
+                <div class="status-item">
+                    <span class="label">Connected:</span>
+                    <span id="connection-status" class="status-badge connected">Yes</span>
+                </div>
+            </div>
+        </header>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="markets-tracked">--</div>
+                <div class="stat-label">Markets Tracked</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="traders-tracked">--</div>
+                <div class="stat-label">Traders Analyzed</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="trades-processed">--</div>
+                <div class="stat-label">Trades Processed</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="roi-threshold">--</div>
+                <div class="stat-label">Top Trader ROI Threshold</div>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <button class="tab-button active" data-tab="alerts">Whale Alerts</button>
+            <button class="tab-button" data-tab="trades">Recent Trades</button>
+            <button class="tab-button" data-tab="markets">Markets</button>
+            <button class="tab-button" data-tab="traders">Top Traders</button>
+        </div>
+
+        <div class="tab-content active" id="alerts-tab">
+            <h2>🚨 Whale Alerts</h2>
+            <div id="alerts-list" class="list-container">
+                <div class="empty-state">Waiting for whale alerts...</div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="trades-tab">
+            <h2>📊 Recent Trades</h2>
+            <div id="trades-list" class="list-container">
+                <div class="empty-state">Loading trades...</div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="markets-tab">
+            <h2>📈 Monitored Markets</h2>
+            <div id="markets-list" class="list-container">
+                <div class="empty-state">Loading markets...</div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="traders-tab">
+            <h2>👑 Top Traders</h2>
+            <div id="traders-list" class="list-container">
+                <div class="empty-state">Analyzing traders...</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.0/socket.io.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
