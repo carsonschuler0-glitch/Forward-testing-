@@ -23,7 +23,11 @@ git commit -m "Initial commit"
 2. Click "Deploy from GitHub repo"
 3. Select your repository
 4. Railway auto-detects and deploys
-5. Get your URL: `https://your-app.up.railway.app`
+5. **Add PostgreSQL** (IMPORTANT):
+   - Click "+ New" in your project
+   - Select "Database" → "Add PostgreSQL"
+   - Railway automatically connects it to your app
+6. Get your URL: `https://your-app.up.railway.app`
 
 ## Features
 
@@ -33,6 +37,7 @@ git commit -m "Initial commit"
 - Charts, tables, metrics
 - Mobile responsive
 - Auto-restart on failure
+- **PostgreSQL persistent storage** (no data loss on restart)
 
 ## Configuration
 
@@ -49,6 +54,12 @@ Logs: Railway dashboard or `railway logs`
 
 ## Cost
 
-- Free tier: $5/month credit (~500 hours)
-- Hobby: $5/month unlimited
-- Recommended for production
+- **App**: Free tier $5/month credit (~500 hours), or Hobby $5/month unlimited
+- **PostgreSQL**: Free tier (512 MB storage) or Pro $5/month (8 GB storage)
+- **Total**: Can run entirely on free tier for moderate usage
+
+## Database
+
+See [DATABASE_SETUP.md](DATABASE_SETUP.md) for detailed PostgreSQL configuration.
+
+Without a database, the app runs in memory-only mode (data lost on restart).

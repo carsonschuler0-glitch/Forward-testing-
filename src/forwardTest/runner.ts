@@ -1,6 +1,8 @@
 import { ForwardTestDataCollector } from './dataCollector';
 import { ForwardTestAnalyzer } from './analyzer';
 import { ActiveMarket, LiveTrade, MarketSnapshot } from './types';
+import { db } from '../database/client';
+import { repository } from '../database/repository';
 
 /**
  * Forward test runner - tracks active markets in real-time
@@ -19,22 +21,80 @@ export class ForwardTestRunner {
   }
 
   /**
+   * Initialize database connection
+   */
+  async initializeDatabase(): Promise<void> {
+    if (db.isConfigured()) {
+      console.log('🗄️  Initializing database...');
+      await db.initialize();
+      console.log('✅ Database ready');
+    } else {
+      console.log('⚠️  No database configured - running in memory-only mode');
+    }
+  }
+
+  /**
+   * Load historical data from database
+   */
+  async loadHistoricalData(): Promise<void> {
+    if (!db.isConfigured()) return;
+
+    console.log('📚 Loading historical data from database...');
+
+    // Load markets
+    const markets = await repository.getAllMarkets();
+    markets.forEach(m => this.activeMarkets.set(m.id, m));
+    console.log(`  ✓ Loaded ${markets.length} markets`);
+
+    // Load trades
+    this.allTrades = await repository.getAllTrades();
+    console.log(`  ✓ Loaded ${this.allTrades.length} trades`);
+
+    // Load snapshots (most recent per market)
+    for (const marketId of this.activeMarkets.keys()) {
+      const snapshots = await repository.getSnapshotsByMarket(marketId);
+      if (snapshots.length > 0) {
+        this.snapshots.set(marketId, snapshots[snapshots.length - 1]);
+      }
+    }
+    console.log(`  ✓ Loaded ${this.snapshots.size} market snapshots`);
+
+    console.log('✅ Historical data loaded\n');
+  }
+
+  /**
    * Initialize - fetch active markets to track
    */
   async initialize(marketLimit: number = 50): Promise<void> {
     console.log('\n🚀 Initializing Forward Test...\n');
-    console.log(`Fetching ${marketLimit} active markets to track...`);
 
+    // Initialize database
+    await this.initializeDatabase();
+
+    // Load historical data if available
+    await this.loadHistoricalData();
+
+    // Fetch new active markets
+    console.log(`Fetching ${marketLimit} active markets to track...`);
     const markets = await this.collector.fetchActiveMarkets(marketLimit);
 
-    markets.forEach(m => this.activeMarkets.set(m.id, m));
-
-    console.log(`✅ Tracking ${markets.length} active markets\n`);
-
-    // Take initial snapshots
+    // Add new markets to tracking
     for (const market of markets) {
-      const snapshot = await this.collector.captureMarketSnapshot(market, []);
-      this.snapshots.set(market.id, snapshot);
+      if (!this.activeMarkets.has(market.id)) {
+        this.activeMarkets.set(market.id, market);
+        await repository.saveMarket(market);
+      }
+    }
+
+    console.log(`✅ Tracking ${this.activeMarkets.size} active markets\n`);
+
+    // Take initial snapshots for new markets
+    for (const market of markets) {
+      if (!this.snapshots.has(market.id)) {
+        const snapshot = await this.collector.captureMarketSnapshot(market, []);
+        this.snapshots.set(market.id, snapshot);
+        await repository.saveSnapshot(snapshot);
+      }
     }
   }
 
@@ -48,15 +108,28 @@ export class ForwardTestRunner {
       const trades = await this.collector.fetchNewTrades(market, 1000); // $1k minimum
       newTrades.push(...trades);
 
+      // Save new trades to database
+      for (const trade of trades) {
+        await repository.saveTrade(trade);
+      }
+
       // Update market snapshot
       if (trades.length > 0 || Math.random() < 0.1) { // Snapshot 10% of the time even with no trades
         const snapshot = await this.collector.captureMarketSnapshot(market, this.allTrades.filter(t => t.marketId === market.id));
         this.snapshots.set(market.id, snapshot);
+        await repository.saveSnapshot(snapshot);
       }
 
       // Update price impact for existing trades
       const marketTrades = this.allTrades.filter(t => t.marketId === market.id);
       await this.collector.updatePriceImpact(marketTrades, market);
+
+      // Save updated trades with price impact
+      for (const trade of marketTrades) {
+        if (trade.priceAfter5min || trade.priceAfter15min || trade.priceAfter1hr) {
+          await repository.saveTrade(trade);
+        }
+      }
 
       // Small delay to avoid rate limiting
       await new Promise(resolve => setTimeout(resolve, 100));
@@ -99,7 +172,7 @@ export class ForwardTestRunner {
   /**
    * Generate and print analysis
    */
-  printAnalysis(): void {
+  async printAnalysis(): Promise<void> {
     if (this.allTrades.length === 0) {
       console.log('No trades collected yet...');
       return;
@@ -110,6 +183,13 @@ export class ForwardTestRunner {
       this.activeMarkets,
       this.snapshots
     );
+
+    // Save trader reputations to database
+    if (db.isConfigured()) {
+      for (const trader of analysis.topTraders) {
+        await repository.saveTraderReputation(trader);
+      }
+    }
 
     console.log('\n' + '='.repeat(80));
     console.log('📊 FORWARD TEST ANALYSIS');
