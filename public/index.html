@@ -3,85 +3,393 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Polymarket Whale Tracker Dashboard</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>Polymarket Sharp Money Tracker</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #0a0e27;
+            color: #e0e6ed;
+            line-height: 1.6;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: space-around;
+            padding: 1.5rem;
+            background: #161b2e;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .status-item {
+            text-align: center;
+        }
+
+        .status-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .status-label {
+            font-size: 0.9rem;
+            color: #8b92a8;
+            margin-top: 0.25rem;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            background: #161b2e;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            border: 1px solid #2a3147;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid #2a3147;
+        }
+
+        .card-icon {
+            font-size: 1.5rem;
+            margin-right: 0.75rem;
+        }
+
+        .card-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .metric-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #1a1f36;
+        }
+
+        .metric-row:last-child {
+            border-bottom: none;
+        }
+
+        .metric-label {
+            color: #8b92a8;
+        }
+
+        .metric-value {
+            font-weight: 600;
+            color: #e0e6ed;
+        }
+
+        .metric-value.positive {
+            color: #10b981;
+        }
+
+        .metric-value.negative {
+            color: #ef4444;
+        }
+
+        .bucket-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        .bucket-table th {
+            background: #1a1f36;
+            padding: 0.75rem;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #2a3147;
+        }
+
+        .bucket-table td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #1a1f36;
+        }
+
+        .bucket-table tr:hover {
+            background: #1a1f36;
+        }
+
+        .accuracy-bar {
+            height: 8px;
+            background: #1a1f36;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 0.25rem;
+        }
+
+        .accuracy-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #10b981 0%, #667eea 100%);
+            transition: width 0.3s ease;
+        }
+
+        .trader-card {
+            background: #1a1f36;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            border-left: 4px solid #667eea;
+        }
+
+        .trader-address {
+            font-family: monospace;
+            font-size: 0.9rem;
+            color: #667eea;
+            margin-bottom: 0.5rem;
+        }
+
+        .trader-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+            font-size: 0.85rem;
+        }
+
+        .pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .live-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background: #10b981;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+            animation: pulse 2s infinite;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-top: 1rem;
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        .last-update {
+            text-align: center;
+            color: #8b92a8;
+            margin-top: 2rem;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            .status-bar {
+                flex-direction: column;
+                gap: 1rem;
+            }
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>🐋 Polymarket Whale Tracker</h1>
-            <div class="status-bar">
-                <div class="status-item">
-                    <span class="label">Bot Status:</span>
-                    <span id="bot-status" class="status-badge running">Running</span>
-                </div>
-                <div class="status-item">
-                    <span class="label">Uptime:</span>
-                    <span id="uptime">--</span>
-                </div>
-                <div class="status-item">
-                    <span class="label">Connected:</span>
-                    <span id="connection-status" class="status-badge connected">Yes</span>
-                </div>
-            </div>
-        </header>
+    <div class="header">
+        <h1>Polymarket Sharp Money Tracker</h1>
+        <p><span class="live-indicator"></span>Real-time Trade Analysis</p>
+    </div>
 
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-value" id="markets-tracked">--</div>
-                <div class="stat-label">Markets Tracked</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="traders-tracked">--</div>
-                <div class="stat-label">Traders Analyzed</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="trades-processed">--</div>
-                <div class="stat-label">Trades Processed</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="roi-threshold">--</div>
-                <div class="stat-label">Top Trader ROI Threshold</div>
-            </div>
+    <div class="status-bar">
+        <div class="status-item">
+            <div class="status-value" id="totalMarkets">0</div>
+            <div class="status-label">Active Markets</div>
         </div>
-
-        <div class="tabs">
-            <button class="tab-button active" data-tab="alerts">Whale Alerts</button>
-            <button class="tab-button" data-tab="trades">Recent Trades</button>
-            <button class="tab-button" data-tab="markets">Markets</button>
-            <button class="tab-button" data-tab="traders">Top Traders</button>
+        <div class="status-item">
+            <div class="status-value" id="totalTrades">0</div>
+            <div class="status-label">Total Trades</div>
         </div>
-
-        <div class="tab-content active" id="alerts-tab">
-            <h2>🚨 Whale Alerts</h2>
-            <div id="alerts-list" class="list-container">
-                <div class="empty-state">Waiting for whale alerts...</div>
-            </div>
+        <div class="status-item">
+            <div class="status-value" id="resolvedTrades">0</div>
+            <div class="status-label">Resolved Trades</div>
         </div>
-
-        <div class="tab-content" id="trades-tab">
-            <h2>📊 Recent Trades</h2>
-            <div id="trades-list" class="list-container">
-                <div class="empty-state">Loading trades...</div>
-            </div>
-        </div>
-
-        <div class="tab-content" id="markets-tab">
-            <h2>📈 Monitored Markets</h2>
-            <div id="markets-list" class="list-container">
-                <div class="empty-state">Loading markets...</div>
-            </div>
-        </div>
-
-        <div class="tab-content" id="traders-tab">
-            <h2>👑 Top Traders</h2>
-            <div id="traders-list" class="list-container">
-                <div class="empty-state">Analyzing traders...</div>
-            </div>
+        <div class="status-item">
+            <div class="status-value" id="newTrades" class="pulse">0</div>
+            <div class="status-label">New Trades (Last Poll)</div>
         </div>
     </div>
 
-    <script src="https://cdn.socket.io/4.7.0/socket.io.min.js"></script>
-    <script src="app.js"></script>
+    <div class="container">
+        <!-- Overview Section -->
+        <div class="grid">
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-icon">💵</span>
+                    <h2 class="card-title">Trade Size Distribution</h2>
+                </div>
+                <div class="chart-container">
+                    <canvas id="tradeSizeChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-icon">💰</span>
+                    <h2 class="card-title">Liquidity Distribution</h2>
+                </div>
+                <div class="chart-container">
+                    <canvas id="liquidityChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-icon">🎯</span>
+                    <h2 class="card-title">Trade Clustering</h2>
+                </div>
+                <div id="clusteringMetrics">
+                    <div class="metric-row">
+                        <span class="metric-label">Total Clusters</span>
+                        <span class="metric-value" id="totalClusters">0</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Cluster Accuracy</span>
+                        <span class="metric-value" id="clusterAccuracy">0%</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Avg Cluster Size</span>
+                        <span class="metric-value" id="avgClusterSize">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-icon">👥</span>
+                    <h2 class="card-title">Wallet Concentration</h2>
+                </div>
+                <div id="concentrationMetrics">
+                    <div class="metric-row">
+                        <span class="metric-label">High Concentration Markets</span>
+                        <span class="metric-value" id="highConcMarkets">0</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Concentration Accuracy</span>
+                        <span class="metric-value" id="concAccuracy">0%</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Repeat Trader Markets</span>
+                        <span class="metric-value" id="repeatMarkets">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Trade Sizes -->
+        <div class="card full-width">
+            <div class="card-header">
+                <span class="card-icon">📊</span>
+                <h2 class="card-title">Top Trade Size Buckets</h2>
+            </div>
+            <table class="bucket-table">
+                <thead>
+                    <tr>
+                        <th>Size Range</th>
+                        <th>Trades</th>
+                        <th>Avg Size</th>
+                        <th>Resolved</th>
+                        <th>Accuracy</th>
+                    </tr>
+                </thead>
+                <tbody id="tradeSizeTable">
+                    <tr><td colspan="5" style="text-align: center; color: #8b92a8;">Waiting for data...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Top Liquidity Buckets -->
+        <div class="card full-width">
+            <div class="card-header">
+                <span class="card-icon">💎</span>
+                <h2 class="card-title">Top Liquidity Buckets</h2>
+            </div>
+            <table class="bucket-table">
+                <thead>
+                    <tr>
+                        <th>Liquidity Range</th>
+                        <th>Markets</th>
+                        <th>Trades</th>
+                        <th>Avg Liquidity</th>
+                        <th>Accuracy</th>
+                    </tr>
+                </thead>
+                <tbody id="liquidityTable">
+                    <tr><td colspan="5" style="text-align: center; color: #8b92a8;">Waiting for data...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Top Traders -->
+        <div class="card full-width">
+            <div class="card-header">
+                <span class="card-icon">👑</span>
+                <h2 class="card-title">Top Traders by Reputation</h2>
+            </div>
+            <div id="topTraders">
+                <p style="text-align: center; color: #8b92a8;">Waiting for data...</p>
+            </div>
+        </div>
+
+        <div class="last-update">
+            Last updated: <span id="lastUpdate">Never</span>
+        </div>
+    </div>
+
+    <script src="/js/dashboard.js"></script>
 </body>
 </html>
