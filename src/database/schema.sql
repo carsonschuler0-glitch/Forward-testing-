@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS markets (
     id VARCHAR(255) PRIMARY KEY,
     condition_id VARCHAR(255) NOT NULL,
     question TEXT NOT NULL,
+    category VARCHAR(100),
     end_date TIMESTAMP,
     outcome_prices JSONB,
     volume DECIMAL(20, 2),
@@ -98,6 +99,7 @@ CREATE INDEX IF NOT EXISTS idx_trades_trader ON trades(trader);
 CREATE INDEX IF NOT EXISTS idx_trades_timestamp ON trades(timestamp);
 CREATE INDEX IF NOT EXISTS idx_trades_was_correct ON trades(was_correct);
 CREATE INDEX IF NOT EXISTS idx_markets_resolved ON markets(resolved_at);
+CREATE INDEX IF NOT EXISTS idx_markets_category ON markets(category);
 CREATE INDEX IF NOT EXISTS idx_snapshots_market_id ON market_snapshots(market_id);
 CREATE INDEX IF NOT EXISTS idx_snapshots_timestamp ON market_snapshots(timestamp);
 CREATE INDEX IF NOT EXISTS idx_clusters_market_id ON trade_clusters(market_id);

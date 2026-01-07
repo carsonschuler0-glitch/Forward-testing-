@@ -14,9 +14,10 @@ export class ForwardTestRepository {
     if (!db.isConfigured()) return;
 
     await db.query(
-      `INSERT INTO markets (id, condition_id, question, end_date, outcome_prices, volume, liquidity, created_at, resolved_at, resolved_outcome)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      `INSERT INTO markets (id, condition_id, question, category, end_date, outcome_prices, volume, liquidity, created_at, resolved_at, resolved_outcome)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
        ON CONFLICT (id) DO UPDATE SET
+         category = EXCLUDED.category,
          volume = EXCLUDED.volume,
          liquidity = EXCLUDED.liquidity,
          outcome_prices = EXCLUDED.outcome_prices,
@@ -26,6 +27,7 @@ export class ForwardTestRepository {
         market.id,
         market.id, // Using id as condition_id for simplicity
         market.question,
+        market.category,
         market.endDate ? new Date(market.endDate * 1000) : null,
         JSON.stringify(market.currentPrices),
         market.volume,
@@ -50,7 +52,7 @@ export class ForwardTestRepository {
       volume: parseFloat(row.volume),
       createdAt: Math.floor(new Date(row.created_at).getTime() / 1000),
       endDate: row.end_date ? Math.floor(new Date(row.end_date).getTime() / 1000) : null,
-      category: 'general',
+      category: row.category || 'Other',
       currentPrices: row.outcome_prices || [0.5, 0.5],
       resolvedOutcome: row.resolved_outcome,
       resolvedAt: row.resolved_at ? Math.floor(new Date(row.resolved_at).getTime() / 1000) : undefined

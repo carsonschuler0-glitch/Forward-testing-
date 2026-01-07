@@ -251,6 +251,18 @@ export class ForwardTestRunner {
       });
     }
 
+    // Category breakdown
+    if (Object.keys(analysis.categoryBreakdown).length > 0) {
+      console.log('\n📁 CATEGORY BREAKDOWN:');
+      console.log('-'.repeat(80));
+      Object.entries(analysis.categoryBreakdown)
+        .sort((a: any, b: any) => b[1].totalTrades - a[1].totalTrades)
+        .forEach(([category, data]: any) => {
+          console.log(`  ${category}: ${data.totalMarkets} markets | ${data.totalTrades} trades | Volume: $${data.totalVolume.toFixed(0)} | Avg: $${data.avgTradeSize.toFixed(0)}`);
+          console.log(`    Resolved: ${data.resolvedTrades} | Correct: ${data.correctTrades} | Accuracy: ${(data.accuracy * 100).toFixed(1)}%`);
+        });
+    }
+
     // Clustering
     console.log(`\n🎯 TRADE CLUSTERING:`);
     console.log('-'.repeat(80));

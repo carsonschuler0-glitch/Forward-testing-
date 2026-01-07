@@ -451,6 +451,52 @@ export class ForwardTestAnalyzer {
   }
 
   /**
+   * Analyze trades by market category
+   */
+  private analyzeCategoryBreakdown(trades: LiveTrade[], markets: Map<string, ActiveMarket>) {
+    const categoryStats: {
+      [category: string]: {
+        totalMarkets: number;
+        totalTrades: number;
+        resolvedTrades: number;
+        correctTrades: number;
+        accuracy: number;
+        totalVolume: number;
+        avgTradeSize: number;
+      };
+    } = {};
+
+    // Group markets by category
+    const categoryMarkets = new Map<string, Set<string>>();
+    markets.forEach((market, id) => {
+      if (!categoryMarkets.has(market.category)) {
+        categoryMarkets.set(market.category, new Set());
+      }
+      categoryMarkets.get(market.category)!.add(id);
+    });
+
+    // Analyze trades per category
+    categoryMarkets.forEach((marketIds, category) => {
+      const categoryTrades = trades.filter(t => marketIds.has(t.marketId));
+      const resolvedTrades = categoryTrades.filter(t => t.wasCorrect !== undefined);
+      const correctTrades = resolvedTrades.filter(t => t.wasCorrect === true);
+      const totalVolume = categoryTrades.reduce((sum, t) => sum + t.size, 0);
+
+      categoryStats[category] = {
+        totalMarkets: marketIds.size,
+        totalTrades: categoryTrades.length,
+        resolvedTrades: resolvedTrades.length,
+        correctTrades: correctTrades.length,
+        accuracy: resolvedTrades.length > 0 ? correctTrades.length / resolvedTrades.length : 0,
+        totalVolume,
+        avgTradeSize: categoryTrades.length > 0 ? totalVolume / categoryTrades.length : 0
+      };
+    });
+
+    return categoryStats;
+  }
+
+  /**
    * Generate full analysis
    */
   generateAnalysis(
@@ -473,6 +519,7 @@ export class ForwardTestAnalyzer {
     const volumeShareBuckets = this.analyzeVolumeShare(trades);
     const marketAgeBuckets = this.analyzeMarketAge(trades);
     const priceImpactAnalysis = this.analyzePriceImpact(trades);
+    const categoryBreakdown = this.analyzeCategoryBreakdown(trades, markets);
 
     const repeatAnalysis = this.analyzeRepeatTraders(trades);
     const concentrationAnalysis = this.analyzeWalletConcentration(trades, snapshots);
@@ -500,6 +547,7 @@ export class ForwardTestAnalyzer {
       volumeShareBuckets,
       marketAgeBuckets,
       priceImpactAnalysis,
+      categoryBreakdown,
       totalClusters: clusters.length,
       clustersCorrect,
       clusterAccuracy: clusters.length > 0 ? clustersCorrect / clusters.length : 0,

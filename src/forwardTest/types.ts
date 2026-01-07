@@ -196,6 +196,19 @@ export interface ForwardTestAnalysis {
   marketsWithSuddenInflux: number; // Volume spike detected
   influxAccuracy: number;
 
+  // Category analysis
+  categoryBreakdown: {
+    [category: string]: {
+      totalMarkets: number;
+      totalTrades: number;
+      resolvedTrades: number;
+      correctTrades: number;
+      accuracy: number;
+      totalVolume: number;
+      avgTradeSize: number;
+    };
+  };
+
   // Recommendations
   recommendations: string[];
 }
