@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS trades (
     price_after_1hr DECIMAL(10, 8),
     is_part_of_cluster BOOLEAN DEFAULT false,
     cluster_size INTEGER,
+    is_contrarian BOOLEAN, -- trading against market consensus
     was_correct BOOLEAN,
     was_favorite BOOLEAN,
     was_underdog BOOLEAN,
@@ -98,6 +99,7 @@ CREATE INDEX IF NOT EXISTS idx_trades_market_id ON trades(market_id);
 CREATE INDEX IF NOT EXISTS idx_trades_trader ON trades(trader);
 CREATE INDEX IF NOT EXISTS idx_trades_timestamp ON trades(timestamp);
 CREATE INDEX IF NOT EXISTS idx_trades_was_correct ON trades(was_correct);
+CREATE INDEX IF NOT EXISTS idx_trades_is_contrarian ON trades(is_contrarian);
 CREATE INDEX IF NOT EXISTS idx_markets_resolved ON markets(resolved_at);
 CREATE INDEX IF NOT EXISTS idx_markets_category ON markets(category);
 CREATE INDEX IF NOT EXISTS idx_snapshots_market_id ON market_snapshots(market_id);

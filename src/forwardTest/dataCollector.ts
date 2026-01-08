@@ -126,6 +126,12 @@ export class ForwardTestDataCollector {
         // Get price before trade from latest snapshot
         const priceBeforeTrade = this.getPriceFromSnapshot(market.id, timestamp, apiTrade.outcomeIndex);
 
+        // Determine if trade is contrarian (going against market consensus)
+        // If betting Yes (outcome 1) when price < 0.5, or betting No (outcome 0) when price > 0.5
+        const marketPrice = market.currentPrices[apiTrade.outcomeIndex] || 0.5;
+        const isContrarian = (apiTrade.outcomeIndex === 1 && marketPrice < 0.5) ||
+                            (apiTrade.outcomeIndex === 0 && marketPrice > 0.5);
+
         trades.push({
           id: apiTrade.transactionHash || `${market.id}-${timestamp}`,
           marketId: market.id,
@@ -140,6 +146,7 @@ export class ForwardTestDataCollector {
           daysUntilClose,
           volumeShare,
           priceBeforeTrade,
+          isContrarian,
         });
       }
 

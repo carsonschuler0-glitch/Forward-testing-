@@ -44,6 +44,9 @@ export interface LiveTrade {
   clusterSize?: number; // Number of trades in the cluster
   clusterTotalVolume?: number;
 
+  // Market position
+  isContrarian?: boolean; // Trading against majority (price < 0.5 betting Yes, or price > 0.5 betting No)
+
   // Later filled when market resolves
   wasCorrect?: boolean;
   wasFavorite?: boolean;
@@ -208,6 +211,14 @@ export interface ForwardTestAnalysis {
       avgTradeSize: number;
     };
   };
+
+  // Contrarian analysis
+  contrarianTrades: number;
+  contrarianCorrect: number;
+  contrarianAccuracy: number;
+  consensusTrades: number;
+  consensusCorrect: number;
+  consensusAccuracy: number;
 
   // Recommendations
   recommendations: string[];

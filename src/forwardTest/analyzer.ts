@@ -451,6 +451,29 @@ export class ForwardTestAnalyzer {
   }
 
   /**
+   * Analyze contrarian vs consensus trades
+   */
+  private analyzeContrarianTrades(trades: LiveTrade[]) {
+    const contrarianTrades = trades.filter(t => t.isContrarian);
+    const consensusTrades = trades.filter(t => !t.isContrarian);
+
+    const contrarianResolved = contrarianTrades.filter(t => t.wasCorrect !== undefined);
+    const consensusResolved = consensusTrades.filter(t => t.wasCorrect !== undefined);
+
+    const contrarianCorrect = contrarianResolved.filter(t => t.wasCorrect === true).length;
+    const consensusCorrect = consensusResolved.filter(t => t.wasCorrect === true).length;
+
+    return {
+      contrarianTrades: contrarianTrades.length,
+      contrarianCorrect,
+      contrarianAccuracy: contrarianResolved.length > 0 ? contrarianCorrect / contrarianResolved.length : 0,
+      consensusTrades: consensusTrades.length,
+      consensusCorrect,
+      consensusAccuracy: consensusResolved.length > 0 ? consensusCorrect / consensusResolved.length : 0
+    };
+  }
+
+  /**
    * Analyze trades by market category
    */
   private analyzeCategoryBreakdown(trades: LiveTrade[], markets: Map<string, ActiveMarket>) {
@@ -520,6 +543,7 @@ export class ForwardTestAnalyzer {
     const marketAgeBuckets = this.analyzeMarketAge(trades);
     const priceImpactAnalysis = this.analyzePriceImpact(trades);
     const categoryBreakdown = this.analyzeCategoryBreakdown(trades, markets);
+    const contrarianAnalysis = this.analyzeContrarianTrades(trades);
 
     const repeatAnalysis = this.analyzeRepeatTraders(trades);
     const concentrationAnalysis = this.analyzeWalletConcentration(trades, snapshots);
@@ -548,6 +572,7 @@ export class ForwardTestAnalyzer {
       marketAgeBuckets,
       priceImpactAnalysis,
       categoryBreakdown,
+      ...contrarianAnalysis,
       totalClusters: clusters.length,
       clustersCorrect,
       clusterAccuracy: clusters.length > 0 ? clustersCorrect / clusters.length : 0,

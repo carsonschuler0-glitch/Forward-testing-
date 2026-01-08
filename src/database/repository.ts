@@ -84,9 +84,9 @@ export class ForwardTestRepository {
         id, market_id, trader, outcome, size, price, timestamp,
         market_liquidity, market_volume, market_age, days_until_close,
         volume_share, price_before_trade, price_after_5min, price_after_15min,
-        price_after_1hr, is_part_of_cluster, cluster_size, was_correct,
-        was_favorite, was_underdog
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
+        price_after_1hr, is_part_of_cluster, cluster_size, is_contrarian,
+        was_correct, was_favorite, was_underdog
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
        ON CONFLICT (id) DO UPDATE SET
          price_after_5min = EXCLUDED.price_after_5min,
          price_after_15min = EXCLUDED.price_after_15min,
@@ -113,6 +113,7 @@ export class ForwardTestRepository {
         trade.priceAfter1hr,
         trade.isPartOfCluster || false,
         trade.clusterSize,
+        trade.isContrarian || false,
         trade.wasCorrect,
         trade.wasFavorite,
         trade.wasUnderdog
@@ -160,6 +161,7 @@ export class ForwardTestRepository {
       priceAfter1hr: row.price_after_1hr ? parseFloat(row.price_after_1hr) : undefined,
       isPartOfCluster: row.is_part_of_cluster,
       clusterSize: row.cluster_size,
+      isContrarian: row.is_contrarian,
       wasCorrect: row.was_correct,
       wasFavorite: row.was_favorite,
       wasUnderdog: row.was_underdog

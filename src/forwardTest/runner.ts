@@ -263,6 +263,12 @@ export class ForwardTestRunner {
         });
     }
 
+    // Contrarian vs Consensus
+    console.log(`\n🔄 CONTRARIAN vs CONSENSUS:`);
+    console.log('-'.repeat(80));
+    console.log(`Contrarian Trades (against majority): ${analysis.contrarianTrades} | Correct: ${analysis.contrarianCorrect} | Accuracy: ${(analysis.contrarianAccuracy * 100).toFixed(1)}%`);
+    console.log(`Consensus Trades (with majority): ${analysis.consensusTrades} | Correct: ${analysis.consensusCorrect} | Accuracy: ${(analysis.consensusAccuracy * 100).toFixed(1)}%`);
+
     // Clustering
     console.log(`\n🎯 TRADE CLUSTERING:`);
     console.log('-'.repeat(80));
