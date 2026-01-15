@@ -55,10 +55,21 @@ export class DashboardServer {
     this.io.on('connection', (socket) => {
       console.log('📱 Client connected:', socket.id);
 
-      // Send initial data
-      socket.emit('status', {
+      // Send initial data with full analysis
+      const initialAnalysis = this.runner['allTrades'].length > 0
+        ? this.runner['analyzer'].generateAnalysis(
+            this.runner['allTrades'],
+            this.runner['activeMarkets'],
+            this.runner['snapshots']
+          )
+        : null;
+
+      socket.emit('update', {
+        timestamp: Date.now(),
+        newTrades: 0,
+        analysis: initialAnalysis,
         markets: this.runner['activeMarkets'].size,
-        trades: this.runner['allTrades'].length,
+        totalTrades: this.runner['allTrades'].length,
       });
 
       socket.on('disconnect', () => {

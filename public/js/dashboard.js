@@ -27,31 +27,39 @@ function updateDashboard(data) {
     const { analysis, newTrades, markets, totalTrades } = data;
 
     // Update status bar
-    document.getElementById('totalMarkets').textContent = markets;
-    document.getElementById('totalTrades').textContent = totalTrades;
-    document.getElementById('resolvedTrades').textContent = analysis.resolvedTrades;
-    document.getElementById('newTrades').textContent = newTrades;
+    document.getElementById('totalMarkets').textContent = markets || 0;
+    document.getElementById('totalTrades').textContent = totalTrades || 0;
+    document.getElementById('newTrades').textContent = newTrades || 0;
+
+    // If no analysis yet, show waiting state
+    if (!analysis) {
+        document.getElementById('resolvedTrades').textContent = '0';
+        console.log('No analysis data yet - waiting for trades...');
+        return;
+    }
+
+    document.getElementById('resolvedTrades').textContent = analysis.resolvedTrades || 0;
 
     // Update clustering metrics
-    document.getElementById('totalClusters').textContent = analysis.totalClusters;
-    document.getElementById('clusterAccuracy').textContent = (analysis.clusterAccuracy * 100).toFixed(1) + '%';
-    document.getElementById('avgClusterSize').textContent = analysis.avgClusterSize.toFixed(1);
+    document.getElementById('totalClusters').textContent = analysis.totalClusters || 0;
+    document.getElementById('clusterAccuracy').textContent = ((analysis.clusterAccuracy || 0) * 100).toFixed(1) + '%';
+    document.getElementById('avgClusterSize').textContent = (analysis.avgClusterSize || 0).toFixed(1);
 
     // Update concentration metrics
-    document.getElementById('highConcMarkets').textContent = analysis.highConcentrationMarkets;
-    document.getElementById('concAccuracy').textContent = (analysis.concentrationAccuracy * 100).toFixed(1) + '%';
-    document.getElementById('repeatMarkets').textContent = analysis.marketsWithRepeatTraders;
+    document.getElementById('highConcMarkets').textContent = analysis.highConcentrationMarkets || 0;
+    document.getElementById('concAccuracy').textContent = ((analysis.concentrationAccuracy || 0) * 100).toFixed(1) + '%';
+    document.getElementById('repeatMarkets').textContent = analysis.marketsWithRepeatTraders || 0;
 
     // Update charts
-    updateTradeSizeChart(analysis.tradeSizeBuckets);
-    updateLiquidityChart(analysis.liquidityBuckets);
+    updateTradeSizeChart(analysis.tradeSizeBuckets || {});
+    updateLiquidityChart(analysis.liquidityBuckets || {});
 
     // Update tables
-    updateTradeSizeTable(analysis.tradeSizeBuckets, totalTrades);
-    updateLiquidityTable(analysis.liquidityBuckets);
+    updateTradeSizeTable(analysis.tradeSizeBuckets || {}, totalTrades);
+    updateLiquidityTable(analysis.liquidityBuckets || {});
 
     // Update top traders
-    updateTopTraders(analysis.topTraders);
+    updateTopTraders(analysis.topTraders || []);
 
     // Update timestamp
     document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
