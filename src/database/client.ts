@@ -47,12 +47,21 @@ export class DatabaseClient {
 
   private async testConnection(): Promise<void> {
     try {
-      const client = await this.pool.connect();
-      await client.query('SELECT NOW()');
-      client.release();
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Connection timeout')), 5000)
+      );
+
+      const connectPromise = (async () => {
+        const client = await this.pool.connect();
+        await client.query('SELECT NOW()');
+        client.release();
+      })();
+
+      await Promise.race([connectPromise, timeoutPromise]);
       console.log('✅ Database connected successfully');
     } catch (error: any) {
       console.error('❌ Database connection failed:', error.message);
+      console.warn('⚠️  App will continue without database persistence');
     }
   }
 
@@ -70,7 +79,8 @@ export class DatabaseClient {
       console.log('✅ Database schema initialized');
     } catch (error: any) {
       console.error('❌ Failed to initialize database schema:', error.message);
-      throw error;
+      console.warn('⚠️  Continuing without database - using memory-only mode');
+      // Don't throw - allow app to continue without database
     }
   }
 
