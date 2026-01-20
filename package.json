@@ -4,7 +4,7 @@
   "description": "Bot to track high-profit traders making large trades on Polymarket",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && mkdir -p dist/database && cp src/database/schema.sql dist/database/",
     "start": "node dist/webServer.js",
     "dev": "ts-node src/index.ts",
     "watch": "tsc -w",
