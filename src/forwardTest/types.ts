@@ -73,6 +73,21 @@ export interface TraderReputation {
 
   // Last updated
   lastTradeAt: number;
+
+  // Recent trades (for dashboard display)
+  recentTrades?: TraderTradeDetail[];
+}
+
+export interface TraderTradeDetail {
+  id: string;
+  marketQuestion: string;
+  outcome: string; // "Yes" or "No"
+  size: number;
+  price: number;
+  timestamp: number;
+  wasCorrect?: boolean;
+  isContrarian?: boolean;
+  category: string;
 }
 
 export interface TradeCluster {

@@ -4,6 +4,17 @@ const socket = io();
 let tradeSizeChart = null;
 let liquidityChart = null;
 
+// Helper function to format time ago
+function getTimeAgo(timestamp) {
+    const seconds = Math.floor((Date.now() / 1000) - timestamp);
+
+    if (seconds < 60) return `${seconds}s ago`;
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+    if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
+    return `${Math.floor(seconds / 604800)}w ago`;
+}
+
 // Connect to WebSocket
 socket.on('connect', () => {
     console.log('Connected to server');
@@ -293,6 +304,42 @@ function updateTopTraders(traders) {
         const accuracyClass = trader.accuracy > 0.5 ? 'positive' : trader.accuracy < 0.4 ? 'negative' : '';
         const roiClass = trader.roi > 0 ? 'positive' : trader.roi < 0 ? 'negative' : '';
 
+        // Build recent trades HTML
+        let recentTradesHtml = '';
+        if (trader.recentTrades && trader.recentTrades.length > 0) {
+            recentTradesHtml = `
+                <div class="trader-trades" style="margin-top: 1rem; border-top: 1px solid #2a3147; padding-top: 0.75rem;">
+                    <div style="font-size: 0.85rem; color: #8b92a8; margin-bottom: 0.5rem;">Recent Trades:</div>
+                    <div style="max-height: 200px; overflow-y: auto;">
+                        ${trader.recentTrades.slice(0, 5).map(trade => {
+                            const outcomeColor = trade.outcome === 'Yes' ? '#10b981' : '#ef4444';
+                            const correctIcon = trade.wasCorrect === true ? '✅' : trade.wasCorrect === false ? '❌' : '⏳';
+                            const contrarianBadge = trade.isContrarian ? '<span style="background: #764ba2; color: white; padding: 0 4px; border-radius: 3px; font-size: 0.7rem; margin-left: 4px;">CONTRARIAN</span>' : '';
+                            const timeAgo = getTimeAgo(trade.timestamp);
+
+                            return `
+                                <div style="background: #1a1f36; padding: 0.5rem; border-radius: 4px; margin-bottom: 0.5rem; font-size: 0.8rem;">
+                                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                        <div style="flex: 1; margin-right: 0.5rem;">
+                                            <div style="color: #e0e6ed; margin-bottom: 0.25rem;">${trade.marketQuestion.substring(0, 60)}${trade.marketQuestion.length > 60 ? '...' : ''}</div>
+                                            <div style="color: #8b92a8;">
+                                                <span style="color: ${outcomeColor}; font-weight: bold;">${trade.outcome}</span> @ ${(trade.price * 100).toFixed(0)}¢
+                                                ${contrarianBadge}
+                                            </div>
+                                        </div>
+                                        <div style="text-align: right; white-space: nowrap;">
+                                            <div style="color: #667eea; font-weight: bold;">$${trade.size.toFixed(0)}</div>
+                                            <div style="color: #8b92a8;">${correctIcon} ${timeAgo}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
         return `
             <div class="trader-card">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
@@ -325,6 +372,7 @@ function updateTopTraders(traders) {
                         <div class="metric-value">${(trader.highLiqAccuracy * 100).toFixed(1)}%</div>
                     </div>
                 </div>
+                ${recentTradesHtml}
             </div>
         `;
     }).join('');

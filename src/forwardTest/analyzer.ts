@@ -1,4 +1,4 @@
-import { LiveTrade, ActiveMarket, TraderReputation, TradeCluster, ForwardTestAnalysis, MarketSnapshot } from './types';
+import { LiveTrade, ActiveMarket, TraderReputation, TradeCluster, ForwardTestAnalysis, MarketSnapshot, TraderTradeDetail } from './types';
 
 /**
  * Analyzes forward test data with extremely granular bucketing
@@ -291,7 +291,7 @@ export class ForwardTestAnalyzer {
   /**
    * Calculate trader reputation scores
    */
-  updateTraderReputations(trades: LiveTrade[]): void {
+  updateTraderReputations(trades: LiveTrade[], markets: Map<string, ActiveMarket>): void {
     // Group trades by trader
     const traderTrades = new Map<string, LiveTrade[]>();
     trades.forEach(t => {
@@ -301,11 +301,11 @@ export class ForwardTestAnalyzer {
     });
 
     // Calculate stats for each trader
-    traderTrades.forEach((trades, address) => {
-      const resolvedTrades = trades.filter(t => t.wasCorrect !== undefined);
-      const correctTrades = trades.filter(t => t.wasCorrect === true);
-      const totalVolume = trades.reduce((sum, t) => sum + t.size, 0);
-      const avgTradeSize = totalVolume / trades.length;
+    traderTrades.forEach((traderTradeList, address) => {
+      const resolvedTrades = traderTradeList.filter(t => t.wasCorrect !== undefined);
+      const correctTrades = traderTradeList.filter(t => t.wasCorrect === true);
+      const totalVolume = traderTradeList.reduce((sum, t) => sum + t.size, 0);
+      const avgTradeSize = totalVolume / traderTradeList.length;
 
       // Calculate profit/loss (simplified: correct = +price, incorrect = -price)
       let profitLoss = 0;
@@ -336,11 +336,30 @@ export class ForwardTestAnalyzer {
       const volumeScore = Math.min(20, (totalVolume / 100000) * 20); // $100k = max score
       const reputationScore = accuracyScore + roiScore + volumeScore;
 
-      const lastTradeAt = Math.max(...trades.map(t => t.timestamp));
+      const lastTradeAt = Math.max(...traderTradeList.map(t => t.timestamp));
+
+      // Get recent trades with details (last 10)
+      const recentTrades: TraderTradeDetail[] = traderTradeList
+        .sort((a, b) => b.timestamp - a.timestamp)
+        .slice(0, 10)
+        .map(t => {
+          const market = markets.get(t.marketId);
+          return {
+            id: t.id,
+            marketQuestion: market?.question || 'Unknown Market',
+            outcome: t.outcome === 1 ? 'Yes' : 'No',
+            size: t.size,
+            price: t.price,
+            timestamp: t.timestamp,
+            wasCorrect: t.wasCorrect,
+            isContrarian: t.isContrarian,
+            category: market?.category || 'Other',
+          };
+        });
 
       this.traderStats.set(address, {
         address,
-        totalTrades: trades.length,
+        totalTrades: traderTradeList.length,
         resolvedTrades: resolvedTrades.length,
         correctTrades: correctTrades.length,
         accuracy,
@@ -352,6 +371,7 @@ export class ForwardTestAnalyzer {
         highLiqAccuracy,
         reputationScore,
         lastTradeAt,
+        recentTrades,
       });
     });
   }
@@ -536,7 +556,7 @@ export class ForwardTestAnalyzer {
     snapshots: Map<string, MarketSnapshot>
   ): ForwardTestAnalysis {
     // Update trader reputations
-    this.updateTraderReputations(trades);
+    this.updateTraderReputations(trades, markets);
 
     // Detect clusters
     const clusters = this.detectClusters(trades);
