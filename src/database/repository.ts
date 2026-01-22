@@ -159,12 +159,12 @@ export class ForwardTestRepository {
       priceAfter5min: row.price_after_5min ? parseFloat(row.price_after_5min) : undefined,
       priceAfter15min: row.price_after_15min ? parseFloat(row.price_after_15min) : undefined,
       priceAfter1hr: row.price_after_1hr ? parseFloat(row.price_after_1hr) : undefined,
-      isPartOfCluster: row.is_part_of_cluster,
-      clusterSize: row.cluster_size,
-      isContrarian: row.is_contrarian,
-      wasCorrect: row.was_correct,
-      wasFavorite: row.was_favorite,
-      wasUnderdog: row.was_underdog
+      isPartOfCluster: row.is_part_of_cluster ?? undefined,
+      clusterSize: row.cluster_size ?? undefined,
+      isContrarian: row.is_contrarian ?? undefined,
+      wasCorrect: row.was_correct ?? undefined,  // Convert null to undefined
+      wasFavorite: row.was_favorite ?? undefined,
+      wasUnderdog: row.was_underdog ?? undefined
     };
   }
 
