@@ -19,6 +19,7 @@ export class ForwardTestAnalyzer {
       const key = `$${i}k-$${i + 1}k`;
 
       const tradesInRange = trades.filter(t => t.size >= min && t.size < max);
+      const resolvedInRange = tradesInRange.filter(t => t.wasCorrect !== undefined);
       const correctTrades = tradesInRange.filter(t => t.wasCorrect === true);
       const avgSize = tradesInRange.length > 0
         ? tradesInRange.reduce((sum, t) => sum + t.size, 0) / tradesInRange.length
@@ -27,8 +28,9 @@ export class ForwardTestAnalyzer {
       if (tradesInRange.length > 0) {
         buckets[key] = {
           totalTrades: tradesInRange.length,
+          resolvedTrades: resolvedInRange.length,
           correctTrades: correctTrades.length,
-          accuracy: tradesInRange.length > 0 ? correctTrades.length / tradesInRange.length : 0,
+          accuracy: resolvedInRange.length > 0 ? correctTrades.length / resolvedInRange.length : 0,
           avgSize,
         };
       }
@@ -36,6 +38,7 @@ export class ForwardTestAnalyzer {
 
     // Add >$50k bucket
     const largeTradesInRange = trades.filter(t => t.size >= 50000);
+    const largeResolvedInRange = largeTradesInRange.filter(t => t.wasCorrect !== undefined);
     const largeCorrectTrades = largeTradesInRange.filter(t => t.wasCorrect === true);
     const largAvgSize = largeTradesInRange.length > 0
       ? largeTradesInRange.reduce((sum, t) => sum + t.size, 0) / largeTradesInRange.length
@@ -44,8 +47,9 @@ export class ForwardTestAnalyzer {
     if (largeTradesInRange.length > 0) {
       buckets['>$50k'] = {
         totalTrades: largeTradesInRange.length,
+        resolvedTrades: largeResolvedInRange.length,
         correctTrades: largeCorrectTrades.length,
-        accuracy: largeTradesInRange.length > 0 ? largeCorrectTrades.length / largeTradesInRange.length : 0,
+        accuracy: largeResolvedInRange.length > 0 ? largeCorrectTrades.length / largeResolvedInRange.length : 0,
         avgSize: largAvgSize,
       };
     }
@@ -72,6 +76,7 @@ export class ForwardTestAnalyzer {
 
       if (tradesInRange.length === 0) continue;
 
+      const resolvedInRange = tradesInRange.filter(t => t.wasCorrect !== undefined);
       const correctTrades = tradesInRange.filter(t => t.wasCorrect === true);
       const marketsInRange = new Set(tradesInRange.map(t => t.marketId));
       const avgLiq = tradesInRange.length > 0
@@ -81,8 +86,9 @@ export class ForwardTestAnalyzer {
       buckets[key] = {
         totalMarkets: marketsInRange.size,
         totalTrades: tradesInRange.length,
+        resolvedTrades: resolvedInRange.length,
         correctTrades: correctTrades.length,
-        accuracy: tradesInRange.length > 0 ? correctTrades.length / tradesInRange.length : 0,
+        accuracy: resolvedInRange.length > 0 ? correctTrades.length / resolvedInRange.length : 0,
         avgLiquidity: avgLiq,
       };
     }
@@ -94,6 +100,7 @@ export class ForwardTestAnalyzer {
     });
 
     if (largeTradesInRange.length > 0) {
+      const largeResolvedInRange = largeTradesInRange.filter(t => t.wasCorrect !== undefined);
       const largeCorrectTrades = largeTradesInRange.filter(t => t.wasCorrect === true);
       const largeMarketsInRange = new Set(largeTradesInRange.map(t => t.marketId));
       const largeAvgLiq = largeTradesInRange.reduce((sum, t) => sum + (markets.get(t.marketId)?.liquidity || 0), 0) / largeTradesInRange.length;
@@ -101,8 +108,9 @@ export class ForwardTestAnalyzer {
       buckets['>$100k'] = {
         totalMarkets: largeMarketsInRange.size,
         totalTrades: largeTradesInRange.length,
+        resolvedTrades: largeResolvedInRange.length,
         correctTrades: largeCorrectTrades.length,
-        accuracy: largeCorrectTrades.length / largeTradesInRange.length,
+        accuracy: largeResolvedInRange.length > 0 ? largeCorrectTrades.length / largeResolvedInRange.length : 0,
         avgLiquidity: largeAvgLiq,
       };
     }

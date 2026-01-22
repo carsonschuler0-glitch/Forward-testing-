@@ -227,13 +227,15 @@ function updateTradeSizeTable(buckets, totalTrades) {
     tbody.innerHTML = entries.map(([range, data]) => {
         const accuracy = (data.accuracy * 100).toFixed(1);
         const accuracyClass = data.accuracy > 0.5 ? 'positive' : '';
+        const resolved = data.resolvedTrades || 0;
+        const correct = data.correctTrades || 0;
 
         return `
             <tr>
                 <td><strong>${range}</strong></td>
                 <td>${data.totalTrades}</td>
                 <td>$${data.avgSize.toFixed(0)}</td>
-                <td>${data.correctTrades}</td>
+                <td>${resolved} (${correct} correct)</td>
                 <td>
                     <span class="metric-value ${accuracyClass}">${accuracy}%</span>
                     <div class="accuracy-bar">
