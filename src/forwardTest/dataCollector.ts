@@ -308,4 +308,54 @@ export class ForwardTestDataCollector {
     if (q.includes('war') || q.includes('ukraine') || q.includes('israel') || q.includes('china')) return 'Geopolitics';
     return 'Other';
   }
+
+  /**
+   * Check if a market has resolved and get its outcome
+   * Returns { resolved: true, outcome: 0 or 1 } or { resolved: false }
+   */
+  async checkMarketResolution(marketId: string): Promise<{ resolved: boolean; outcome?: number }> {
+    try {
+      const response = await axios.get(`${this.gammaApi}/markets/${marketId}`);
+
+      if (!response.data) {
+        return { resolved: false };
+      }
+
+      const market = response.data;
+
+      // Check various resolution indicators
+      // Polymarket uses different fields depending on the API version
+      if (market.resolved === true || market.closed === true) {
+        // Try to get the winning outcome
+        let outcome: number | undefined;
+
+        // Check resolutionSource or winner fields
+        if (market.outcome !== undefined && market.outcome !== null) {
+          outcome = parseInt(market.outcome);
+        } else if (market.winner !== undefined && market.winner !== null) {
+          outcome = parseInt(market.winner);
+        } else if (market.outcomePrices) {
+          // If one price is 1.0 (or very close), that's the winner
+          try {
+            const prices = JSON.parse(market.outcomePrices);
+            const numPrices = prices.map((p: string) => parseFloat(p));
+            if (numPrices[0] >= 0.99) outcome = 0;
+            else if (numPrices[1] >= 0.99) outcome = 1;
+          } catch (e) {
+            // Ignore parse errors
+          }
+        }
+
+        if (outcome !== undefined) {
+          return { resolved: true, outcome };
+        }
+      }
+
+      return { resolved: false };
+    } catch (error: any) {
+      // Market might not exist anymore or API error
+      console.error(`Error checking resolution for ${marketId}:`, error.message);
+      return { resolved: false };
+    }
+  }
 }

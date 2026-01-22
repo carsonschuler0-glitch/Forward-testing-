@@ -156,16 +156,51 @@ export class ForwardTestRunner {
    * Check for resolved markets and update trade outcomes
    */
   async checkResolvedMarkets(): Promise<void> {
-    const resolvedCount = 0;
+    let resolvedCount = 0;
 
     for (const market of this.activeMarkets.values()) {
-      // Re-fetch market to check if it's resolved
-      // TODO: Implement resolution checking logic
-      // For now, markets remain active
+      // Skip already resolved markets
+      if (market.resolvedOutcome !== undefined) {
+        continue;
+      }
+
+      // Check if market has resolved
+      const resolution = await this.collector.checkMarketResolution(market.id);
+
+      if (resolution.resolved && resolution.outcome !== undefined) {
+        // Update market
+        market.resolvedOutcome = resolution.outcome;
+        market.resolvedAt = Date.now();
+        resolvedCount++;
+
+        console.log(`🏁 Market resolved: "${market.question.substring(0, 50)}..." → Outcome: ${resolution.outcome === 1 ? 'Yes' : 'No'}`);
+
+        // Update all trades for this market
+        const marketTrades = this.allTrades.filter(t => t.marketId === market.id);
+        for (const trade of marketTrades) {
+          // Trade is correct if they bet on the winning outcome
+          trade.wasCorrect = trade.outcome === resolution.outcome;
+
+          // Update in database
+          if (db.isConfigured()) {
+            await repository.saveTrade(trade);
+          }
+        }
+
+        // Update market in database
+        if (db.isConfigured()) {
+          await repository.saveMarket(market);
+        }
+
+        console.log(`  ✓ Updated ${marketTrades.length} trades (${marketTrades.filter(t => t.wasCorrect).length} correct)`);
+      }
+
+      // Small delay to avoid rate limiting
+      await new Promise(resolve => setTimeout(resolve, 100));
     }
 
     if (resolvedCount > 0) {
-      console.log(`✅ ${resolvedCount} markets resolved`);
+      console.log(`✅ ${resolvedCount} markets resolved this cycle`);
     }
   }
 
