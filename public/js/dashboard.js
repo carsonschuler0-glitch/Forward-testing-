@@ -4,15 +4,28 @@ const socket = io();
 let tradeSizeChart = null;
 let liquidityChart = null;
 
-// Helper function to format time ago
+// Helper function to format trade time
 function getTimeAgo(timestamp) {
-    const seconds = Math.floor((Date.now() / 1000) - timestamp);
+    const tradeDate = new Date(timestamp * 1000);
+    const now = new Date();
+    const diffMs = now - tradeDate;
+    const diffHours = diffMs / (1000 * 60 * 60);
+    const diffDays = diffMs / (1000 * 60 * 60 * 24);
 
-    if (seconds < 60) return `${seconds}s ago`;
-    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-    if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
-    return `${Math.floor(seconds / 604800)}w ago`;
+    if (diffDays >= 1) {
+        // More than 1 day ago - show "X days ago"
+        const days = Math.floor(diffDays);
+        return `${days}d ago`;
+    } else {
+        // Less than 1 day - show hours and minutes
+        const hours = Math.floor(diffHours);
+        const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+        if (hours > 0) {
+            return `${hours}h ${minutes}m ago`;
+        } else {
+            return `${minutes}m ago`;
+        }
+    }
 }
 
 // Connect to WebSocket
