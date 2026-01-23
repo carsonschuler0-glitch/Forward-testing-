@@ -99,6 +99,34 @@ export class ForwardTestRunner {
   }
 
   /**
+   * Refresh active markets - discover new ones and update existing
+   */
+  async refreshMarkets(limit: number = 200): Promise<number> {
+    const markets = await this.collector.fetchActiveMarkets(limit);
+    let newCount = 0;
+
+    for (const market of markets) {
+      if (!this.activeMarkets.has(market.id)) {
+        this.activeMarkets.set(market.id, market);
+        await repository.saveMarket(market);
+        newCount++;
+      } else {
+        // Update existing market data (liquidity, volume, prices)
+        const existing = this.activeMarkets.get(market.id)!;
+        existing.liquidity = market.liquidity;
+        existing.volume = market.volume;
+        existing.currentPrices = market.currentPrices;
+      }
+    }
+
+    if (newCount > 0) {
+      console.log(`🆕 Discovered ${newCount} new markets (Total: ${this.activeMarkets.size})`);
+    }
+
+    return newCount;
+  }
+
+  /**
    * Poll for new trades (run this on interval)
    */
   async pollTrades(): Promise<void> {

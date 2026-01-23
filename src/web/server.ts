@@ -101,8 +101,8 @@ export class DashboardServer {
       console.log(`📊 Real-time updates via WebSocket\n`);
     });
 
-    // Initialize forward test
-    await this.runner.initialize(100); // Track 100 markets
+    // Initialize forward test with more markets
+    await this.runner.initialize(500); // Track up to 500 markets
 
     // Start polling loop
     this.startPollingLoop();
@@ -115,6 +115,11 @@ export class DashboardServer {
     setInterval(async () => {
       iteration++;
       console.log(`\n--- Poll #${iteration} at ${new Date().toLocaleTimeString()} ---`);
+
+      // Refresh markets every 10 polls (10 minutes) to discover new ones
+      if (iteration % 10 === 0) {
+        await this.runner.refreshMarkets(300);
+      }
 
       const beforeCount = this.runner['allTrades'].length;
 
