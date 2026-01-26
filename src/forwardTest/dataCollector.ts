@@ -61,6 +61,11 @@ export class ForwardTestDataCollector {
           endDate: market.end_date_iso ? new Date(market.end_date_iso).getTime() : null,
           category,
           currentPrices,
+          // NegRisk metadata for multi-outcome arbitrage detection
+          negRisk: market.negRisk === true,
+          negRiskMarketId: market.negRiskMarketId || undefined,
+          eventSlug: market.slug || market.eventSlug || undefined,
+          conditionId: market.condition_id || market.id,
         });
       }
 

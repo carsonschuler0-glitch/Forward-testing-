@@ -15,6 +15,11 @@ export interface ActiveMarket {
   currentPrices: number[]; // Current outcome prices
   resolvedOutcome?: number; // Set when market resolves
   resolvedAt?: number;
+  // NegRisk metadata for multi-outcome arbitrage detection
+  negRisk?: boolean;
+  negRiskMarketId?: string;
+  eventSlug?: string;
+  conditionId?: string;
 }
 
 export interface LiveTrade {
