@@ -48,7 +48,7 @@ socket.on('status', (data) => {
 });
 
 function updateDashboard(data) {
-    const { analysis, newTrades, markets, totalTrades } = data;
+    const { analysis, newTrades, markets, totalTrades, arbitrage } = data;
 
     // Update status bar
     document.getElementById('totalMarkets').textContent = markets || 0;
@@ -84,6 +84,9 @@ function updateDashboard(data) {
 
     // Update top traders
     updateTopTraders(analysis.topTraders || []);
+
+    // Update arbitrage opportunities
+    updateArbitrageOpportunities(arbitrage || []);
 
     // Update timestamp
     document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
@@ -388,6 +391,132 @@ function updateTopTraders(traders) {
                 ${recentTradesHtml}
             </div>
         `;
+    }).join('');
+}
+
+function updateArbitrageOpportunities(opportunities) {
+    const container = document.getElementById('arbitrageOpportunities');
+    const countBadge = document.getElementById('arbCount');
+
+    // Update count badge
+    countBadge.textContent = opportunities.length;
+
+    if (!opportunities || opportunities.length === 0) {
+        container.innerHTML = '<p style="text-align: center; color: #8b92a8;">No opportunities detected yet...</p>';
+        return;
+    }
+
+    // Sort by profit descending
+    opportunities.sort((a, b) => b.profitPercent - a.profitPercent);
+
+    container.innerHTML = opportunities.slice(0, 20).map(opp => {
+        // Determine card type and styling
+        const isNegRisk = opp.subType === 'negrisk';
+        const isSemantic = opp.subType === 'semantic';
+
+        let cardClass = '';
+        let typeClass = '';
+        let typeLabel = '';
+
+        if (isNegRisk) {
+            cardClass = 'negrisk';
+            typeClass = 'negrisk';
+            typeLabel = 'NEGRISK';
+        } else if (isSemantic) {
+            cardClass = 'related-market';
+            typeClass = 'related-market';
+            typeLabel = 'SEMANTIC';
+        } else if (opp.type === 'multi_outcome') {
+            cardClass = '';
+            typeClass = 'multi-outcome';
+            typeLabel = 'MULTI-OUTCOME';
+        } else if (opp.type === 'cross_market') {
+            cardClass = 'cross-market';
+            typeClass = 'cross-market';
+            typeLabel = 'CROSS-MARKET';
+        } else {
+            cardClass = 'related-market';
+            typeClass = 'related-market';
+            typeLabel = 'RELATED';
+        }
+
+        let content = '';
+
+        if (isNegRisk && opp.conditions) {
+            // NegRisk opportunity with conditions
+            const conditionsHtml = opp.conditions.slice(0, 5).map(cond => `
+                <div class="arb-condition">
+                    ${cond.question.substring(0, 40)}... @ ${(cond.yesPrice * 100).toFixed(1)}%
+                </div>
+            `).join('');
+
+            content = `
+                <div class="arb-card ${cardClass}">
+                    <div class="arb-header">
+                        <span class="arb-type ${typeClass}">${typeLabel}</span>
+                        <span class="arb-profit">+${opp.profitPercent.toFixed(2)}%</span>
+                    </div>
+                    <div class="arb-details">
+                        <strong>${opp.eventTitle || 'Event'}</strong><br>
+                        Direction: <strong>${opp.direction}</strong> |
+                        Sum: ${(opp.totalYesPriceSum * 100).toFixed(1)}% |
+                        Confidence: ${(opp.confidenceScore * 100).toFixed(0)}%
+                    </div>
+                    <div class="arb-conditions">
+                        ${conditionsHtml}
+                        ${opp.conditions.length > 5 ? `<div class="arb-condition">+${opp.conditions.length - 5} more</div>` : ''}
+                    </div>
+                </div>
+            `;
+        } else if (isSemantic) {
+            // Semantic dependency opportunity
+            content = `
+                <div class="arb-card ${cardClass}">
+                    <div class="arb-header">
+                        <span class="arb-type ${typeClass}">${typeLabel}</span>
+                        <span class="arb-profit">+${opp.profitPercent.toFixed(2)}%</span>
+                    </div>
+                    <div class="arb-market">
+                        <strong>Market 1:</strong> ${opp.market1Question.substring(0, 80)}...<br>
+                        Price: ${(opp.market1Price * 100).toFixed(1)}% | Liq: $${(opp.market1Liquidity / 1000).toFixed(1)}k
+                    </div>
+                    <div class="arb-market">
+                        <strong>Market 2:</strong> ${opp.market2Question ? opp.market2Question.substring(0, 80) + '...' : 'N/A'}<br>
+                        Price: ${opp.market2Price ? (opp.market2Price * 100).toFixed(1) : 0}% | Liq: $${opp.market2Liquidity ? (opp.market2Liquidity / 1000).toFixed(1) : 0}k
+                    </div>
+                    <div class="arb-details" style="margin-top: 0.5rem;">
+                        Relationship: <strong>${opp.semanticRelationship || 'unknown'}</strong> |
+                        Confidence: ${(opp.confidenceScore * 100).toFixed(0)}%
+                    </div>
+                </div>
+            `;
+        } else {
+            // Standard arbitrage opportunity
+            content = `
+                <div class="arb-card ${cardClass}">
+                    <div class="arb-header">
+                        <span class="arb-type ${typeClass}">${typeLabel}</span>
+                        <span class="arb-profit">+${opp.profitPercent.toFixed(2)}%</span>
+                    </div>
+                    <div class="arb-market">
+                        <strong>Market 1:</strong> ${opp.market1Question.substring(0, 80)}...<br>
+                        Price: ${(opp.market1Price * 100).toFixed(1)}% | Liq: $${(opp.market1Liquidity / 1000).toFixed(1)}k
+                    </div>
+                    ${opp.market2Question ? `
+                    <div class="arb-market">
+                        <strong>Market 2:</strong> ${opp.market2Question.substring(0, 80)}...<br>
+                        Price: ${(opp.market2Price * 100).toFixed(1)}% | Liq: $${(opp.market2Liquidity / 1000).toFixed(1)}k
+                    </div>
+                    ` : ''}
+                    <div class="arb-details" style="margin-top: 0.5rem;">
+                        Confidence: ${(opp.confidenceScore * 100).toFixed(0)}%
+                        ${opp.priceSum ? ` | Sum: ${(opp.priceSum * 100).toFixed(1)}%` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        return content;
     }).join('');
 }
 

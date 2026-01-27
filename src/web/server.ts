@@ -3,7 +3,9 @@ import { createServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 import path from 'path';
 import { ForwardTestRunner } from '../forwardTest/runner';
-import { ForwardTestAnalysis } from '../forwardTest/types';
+import { ForwardTestAnalysis, ActiveMarket } from '../forwardTest/types';
+import { arbitrageEngine } from '../arbitrage/engine';
+import { MarketData, ArbitrageOpportunity } from '../arbitrage/types';
 
 /**
  * Web server for Forward Test Dashboard
@@ -14,6 +16,7 @@ export class DashboardServer {
   private io: SocketIOServer;
   private runner: ForwardTestRunner;
   private port: number;
+  private arbitrageOpportunities: ArbitrageOpportunity[] = [];
 
   constructor(port: number = 3000) {
     this.app = express();
@@ -70,6 +73,7 @@ export class DashboardServer {
         analysis: initialAnalysis,
         markets: this.runner['activeMarkets'].size,
         totalTrades: this.runner['allTrades'].length,
+        arbitrage: this.arbitrageOpportunities,
       });
 
       socket.on('disconnect', () => {
@@ -88,6 +92,7 @@ export class DashboardServer {
       analysis,
       markets: this.runner['activeMarkets'].size,
       totalTrades: this.runner['allTrades'].length,
+      arbitrage: this.arbitrageOpportunities,
     });
   }
 
@@ -130,6 +135,9 @@ export class DashboardServer {
       const afterCount = this.runner['allTrades'].length;
       const newTrades = afterCount - beforeCount;
 
+      // Run arbitrage detection
+      await this.detectArbitrage();
+
       // Generate analysis
       const analysis = this.runner['analyzer'].generateAnalysis(
         this.runner['allTrades'],
@@ -145,5 +153,56 @@ export class DashboardServer {
         this.runner.printAnalysis();
       }
     }, pollInterval);
+  }
+
+  /**
+   * Run arbitrage detection on active markets
+   */
+  private async detectArbitrage(): Promise<void> {
+    try {
+      const activeMarkets = this.runner['activeMarkets'] as Map<string, ActiveMarket>;
+
+      if (activeMarkets.size === 0) return;
+
+      // Convert to MarketData format
+      const markets: MarketData[] = Array.from(activeMarkets.values()).map(this.convertToMarketData);
+
+      // Run detection
+      const result = await arbitrageEngine.detect(markets);
+
+      // Get all current opportunities (not just new ones)
+      this.arbitrageOpportunities = result.opportunities;
+
+      if (result.totalOpportunities > 0) {
+        console.log(`⚡ Arbitrage: ${result.totalOpportunities} opportunities - MO: ${result.byType.multiOutcome}, CM: ${result.byType.crossMarket}, RM: ${result.byType.relatedMarket}`);
+      }
+
+      // Expire old opportunities
+      await arbitrageEngine.expireOldOpportunities();
+
+    } catch (err) {
+      console.error('Arbitrage detection error:', err);
+    }
+  }
+
+  /**
+   * Convert ActiveMarket to MarketData format
+   */
+  private convertToMarketData(market: ActiveMarket): MarketData {
+    return {
+      id: market.id,
+      question: market.question,
+      outcomes: market.outcomes,
+      currentPrices: market.currentPrices,
+      liquidity: market.liquidity,
+      volume: market.volume,
+      category: market.category,
+      createdAt: market.createdAt,
+      endDate: market.endDate,
+      negRisk: market.negRisk,
+      negRiskMarketId: market.negRiskMarketId,
+      eventSlug: market.eventSlug,
+      conditionId: market.conditionId,
+    };
   }
 }
