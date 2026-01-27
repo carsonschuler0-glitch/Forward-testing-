@@ -48,7 +48,7 @@ socket.on('status', (data) => {
 });
 
 function updateDashboard(data) {
-    const { analysis, newTrades, markets, totalTrades, arbitrage } = data;
+    const { analysis, newTrades, markets, totalTrades, arbitrage, paperTrading } = data;
 
     // Update status bar
     document.getElementById('totalMarkets').textContent = markets || 0;
@@ -87,6 +87,11 @@ function updateDashboard(data) {
 
     // Update arbitrage opportunities
     updateArbitrageOpportunities(arbitrage || []);
+
+    // Update paper trading
+    if (paperTrading) {
+        updatePaperTrading(paperTrading);
+    }
 
     // Update timestamp
     document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
@@ -518,6 +523,97 @@ function updateArbitrageOpportunities(opportunities) {
 
         return content;
     }).join('');
+}
+
+function updatePaperTrading(paperTrading) {
+    const { balance, pnl, stats, recentTrades } = paperTrading;
+
+    // Update balance display
+    const balanceEl = document.getElementById('paperBalance');
+    balanceEl.textContent = `$${balance.toFixed(2)}`;
+    balanceEl.className = 'paper-balance ' + (pnl.absolute >= 0 ? 'positive' : 'negative');
+
+    // Update P&L
+    const pnlEl = document.getElementById('paperPnL');
+    const pnlSign = pnl.absolute >= 0 ? '+' : '';
+    pnlEl.textContent = `P&L: ${pnlSign}$${pnl.absolute.toFixed(2)} (${pnlSign}${pnl.percent.toFixed(2)}%)`;
+    pnlEl.className = 'paper-pnl ' + (pnl.absolute >= 0 ? 'positive' : 'negative');
+
+    // Update stats
+    document.getElementById('paperTradeCount').textContent = stats.totalTrades;
+    document.getElementById('paperTotalTrades').textContent = stats.totalTrades;
+    document.getElementById('paperAvgProfit').textContent = `$${stats.avgProfitPerTrade.toFixed(4)}`;
+    document.getElementById('paperMaxDrawdown').textContent = `${stats.maxDrawdown.toFixed(2)}%`;
+    document.getElementById('paperSharpe').textContent = stats.sharpeRatio.toFixed(2);
+    document.getElementById('paperWinRate').textContent = `Win Rate: ${stats.winRate.toFixed(1)}%`;
+
+    // Update type breakdown
+    const breakdownEl = document.getElementById('paperTypeBreakdown');
+    if (stats.byType && Object.keys(stats.byType).length > 0) {
+        breakdownEl.innerHTML = Object.entries(stats.byType).map(([type, data]) => {
+            const profitClass = data.profit >= 0 ? 'positive' : 'negative';
+            return `
+                <div class="type-breakdown-item">
+                    <strong>${type.toUpperCase()}</strong>: ${data.trades} trades |
+                    <span class="${profitClass}">${data.profit >= 0 ? '+' : ''}$${data.profit.toFixed(2)}</span> |
+                    ${data.winRate.toFixed(0)}% win
+                </div>
+            `;
+        }).join('');
+    } else {
+        breakdownEl.innerHTML = '<div class="type-breakdown-item" style="color: #8b92a8;">No trades by type yet</div>';
+    }
+
+    // Update recent trades
+    const recentTradesEl = document.getElementById('paperRecentTrades');
+    if (recentTrades && recentTrades.length > 0) {
+        recentTradesEl.innerHTML = recentTrades.slice().reverse().map(trade => {
+            const statusClass = trade.success ? 'success' : 'failed';
+            const profitClass = trade.realizedProfit >= 0 ? 'positive' : 'negative';
+            const profitSign = trade.realizedProfit >= 0 ? '+' : '';
+            const timeAgo = getTimeAgoMs(trade.timestamp);
+
+            return `
+                <div class="paper-trade-item ${statusClass}">
+                    <div class="paper-trade-info">
+                        <span class="paper-trade-type">${trade.opportunityType.toUpperCase()}</span>
+                        <span style="color: #8b92a8; font-size: 0.8rem;">
+                            $${trade.positionSize.toFixed(2)} (${(trade.kellyFraction * 100).toFixed(1)}% Kelly)
+                        </span>
+                        <div style="font-size: 0.75rem; color: #8b92a8; margin-top: 0.25rem;">
+                            ${trade.market1Question ? trade.market1Question.substring(0, 50) + '...' : ''}
+                        </div>
+                    </div>
+                    <div class="paper-trade-profit ${profitClass}">
+                        ${profitSign}$${trade.realizedProfit.toFixed(4)}
+                        <div style="font-size: 0.75rem; color: #8b92a8;">${timeAgo}</div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    } else {
+        recentTradesEl.innerHTML = '<p style="text-align: center; color: #8b92a8;">No trades yet...</p>';
+    }
+}
+
+// Helper function for millisecond timestamps
+function getTimeAgoMs(timestamp) {
+    const now = Date.now();
+    const diffMs = now - timestamp;
+    const diffSeconds = Math.floor(diffMs / 1000);
+    const diffMinutes = Math.floor(diffSeconds / 60);
+    const diffHours = Math.floor(diffMinutes / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffDays >= 1) {
+        return `${diffDays}d ago`;
+    } else if (diffHours >= 1) {
+        return `${diffHours}h ${diffMinutes % 60}m ago`;
+    } else if (diffMinutes >= 1) {
+        return `${diffMinutes}m ago`;
+    } else {
+        return `${diffSeconds}s ago`;
+    }
 }
 
 // Initialize

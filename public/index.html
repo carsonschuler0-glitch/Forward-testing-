@@ -227,6 +227,188 @@
             font-size: 0.9rem;
         }
 
+        .arb-card {
+            background: linear-gradient(135deg, #1a1f36 0%, #1f2544 100%);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            border-left: 4px solid #f59e0b;
+        }
+
+        .arb-card.negrisk {
+            border-left-color: #10b981;
+        }
+
+        .arb-card.cross-market {
+            border-left-color: #3b82f6;
+        }
+
+        .arb-card.related-market {
+            border-left-color: #8b5cf6;
+        }
+
+        .arb-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .arb-type {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .arb-type.negrisk {
+            background: #10b981;
+            color: #000;
+        }
+
+        .arb-type.multi-outcome {
+            background: #f59e0b;
+            color: #000;
+        }
+
+        .arb-type.cross-market {
+            background: #3b82f6;
+            color: #fff;
+        }
+
+        .arb-type.related-market {
+            background: #8b5cf6;
+            color: #fff;
+        }
+
+        .arb-profit {
+            font-size: 1.25rem;
+            font-weight: bold;
+            color: #10b981;
+        }
+
+        .arb-details {
+            font-size: 0.9rem;
+            color: #8b92a8;
+        }
+
+        .arb-market {
+            background: #0a0e27;
+            padding: 0.5rem;
+            border-radius: 4px;
+            margin-top: 0.5rem;
+            font-size: 0.85rem;
+        }
+
+        .arb-conditions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .arb-condition {
+            background: #0a0e27;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+        }
+
+        .paper-trading-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .paper-balance {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+
+        .paper-pnl {
+            font-size: 1.25rem;
+        }
+
+        .paper-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .paper-stat {
+            background: #1a1f36;
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .paper-stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .paper-stat-label {
+            font-size: 0.8rem;
+            color: #8b92a8;
+            margin-top: 0.25rem;
+        }
+
+        .paper-trade-item {
+            background: #1a1f36;
+            padding: 0.75rem;
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 3px solid #667eea;
+        }
+
+        .paper-trade-item.success {
+            border-left-color: #10b981;
+        }
+
+        .paper-trade-item.failed {
+            border-left-color: #ef4444;
+        }
+
+        .paper-trade-info {
+            flex: 1;
+        }
+
+        .paper-trade-type {
+            font-size: 0.7rem;
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            background: #667eea;
+            color: #fff;
+            margin-right: 0.5rem;
+        }
+
+        .paper-trade-profit {
+            font-weight: bold;
+            text-align: right;
+        }
+
+        .type-breakdown {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+        }
+
+        .type-breakdown-item {
+            background: #1a1f36;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+        }
+
         @media (max-width: 768px) {
             .grid {
                 grid-template-columns: 1fr;
@@ -382,6 +564,68 @@
             </div>
             <div id="topTraders">
                 <p style="text-align: center; color: #8b92a8;">Waiting for data...</p>
+            </div>
+        </div>
+
+        <!-- Arbitrage Opportunities -->
+        <div class="card full-width" style="border: 2px solid #f59e0b;">
+            <div class="card-header">
+                <span class="card-icon">⚡</span>
+                <h2 class="card-title" style="color: #f59e0b;">Arbitrage Opportunities</h2>
+                <span id="arbCount" style="margin-left: auto; background: #f59e0b; color: #000; padding: 0.25rem 0.75rem; border-radius: 12px; font-weight: bold;">0</span>
+            </div>
+            <div id="arbitrageOpportunities">
+                <p style="text-align: center; color: #8b92a8;">No opportunities detected yet...</p>
+            </div>
+        </div>
+
+        <!-- Paper Trading -->
+        <div class="card full-width" style="border: 2px solid #10b981;">
+            <div class="card-header">
+                <span class="card-icon">📈</span>
+                <h2 class="card-title" style="color: #10b981;">Paper Trading (Kelly Criterion)</h2>
+                <span id="paperTradeCount" style="margin-left: auto; background: #10b981; color: #000; padding: 0.25rem 0.75rem; border-radius: 12px; font-weight: bold;">0</span>
+            </div>
+
+            <div class="paper-trading-header">
+                <div>
+                    <div class="paper-balance" id="paperBalance">$100.00</div>
+                    <div class="paper-pnl" id="paperPnL">P&L: $0.00 (0.00%)</div>
+                </div>
+                <div style="text-align: right;">
+                    <div style="color: #8b92a8; font-size: 0.85rem;">Starting: $100</div>
+                    <div style="color: #8b92a8; font-size: 0.85rem;" id="paperWinRate">Win Rate: 0%</div>
+                </div>
+            </div>
+
+            <div class="paper-stats-grid">
+                <div class="paper-stat">
+                    <div class="paper-stat-value" id="paperTotalTrades">0</div>
+                    <div class="paper-stat-label">Total Trades</div>
+                </div>
+                <div class="paper-stat">
+                    <div class="paper-stat-value" id="paperAvgProfit">$0.00</div>
+                    <div class="paper-stat-label">Avg Profit/Trade</div>
+                </div>
+                <div class="paper-stat">
+                    <div class="paper-stat-value" id="paperMaxDrawdown">0%</div>
+                    <div class="paper-stat-label">Max Drawdown</div>
+                </div>
+                <div class="paper-stat">
+                    <div class="paper-stat-value" id="paperSharpe">0.00</div>
+                    <div class="paper-stat-label">Sharpe Ratio</div>
+                </div>
+            </div>
+
+            <div id="paperTypeBreakdown" class="type-breakdown">
+                <!-- Type breakdown will be populated by JS -->
+            </div>
+
+            <div style="margin-top: 1rem;">
+                <h4 style="color: #8b92a8; margin-bottom: 0.5rem;">Recent Trades</h4>
+                <div id="paperRecentTrades">
+                    <p style="text-align: center; color: #8b92a8;">No trades yet...</p>
+                </div>
             </div>
         </div>
 

@@ -6,6 +6,7 @@ import { ForwardTestRunner } from '../forwardTest/runner';
 import { ForwardTestAnalysis, ActiveMarket } from '../forwardTest/types';
 import { arbitrageEngine } from '../arbitrage/engine';
 import { MarketData, ArbitrageOpportunity } from '../arbitrage/types';
+import { paperTradingExecutor, PaperTrade, PaperTradingStats } from '../execution/paperTradingExecutor';
 
 /**
  * Web server for Forward Test Dashboard
@@ -74,6 +75,12 @@ export class DashboardServer {
         markets: this.runner['activeMarkets'].size,
         totalTrades: this.runner['allTrades'].length,
         arbitrage: this.arbitrageOpportunities,
+        paperTrading: {
+          balance: paperTradingExecutor.getBalance(),
+          pnl: paperTradingExecutor.getPnL(),
+          stats: paperTradingExecutor.getStats(),
+          recentTrades: paperTradingExecutor.getRecentTrades(10),
+        },
       });
 
       socket.on('disconnect', () => {
@@ -93,6 +100,12 @@ export class DashboardServer {
       markets: this.runner['activeMarkets'].size,
       totalTrades: this.runner['allTrades'].length,
       arbitrage: this.arbitrageOpportunities,
+      paperTrading: {
+        balance: paperTradingExecutor.getBalance(),
+        pnl: paperTradingExecutor.getPnL(),
+        stats: paperTradingExecutor.getStats(),
+        recentTrades: paperTradingExecutor.getRecentTrades(10),
+      },
     });
   }
 
@@ -170,11 +183,22 @@ export class DashboardServer {
       // Run detection
       const result = await arbitrageEngine.detect(markets);
 
+      // Get new opportunities for paper trading
+      const newOpportunities = arbitrageEngine.getNewOpportunities(result);
+
       // Get all current opportunities (not just new ones)
       this.arbitrageOpportunities = result.opportunities;
 
       if (result.totalOpportunities > 0) {
         console.log(`⚡ Arbitrage: ${result.totalOpportunities} opportunities - MO: ${result.byType.multiOutcome}, CM: ${result.byType.crossMarket}, RM: ${result.byType.relatedMarket}`);
+      }
+
+      // Execute paper trades for new opportunities
+      for (const opportunity of newOpportunities) {
+        // Only trade opportunities above minimum profit threshold
+        if (opportunity.profitPercent >= 0.5 && opportunity.confidenceScore >= 0.6) {
+          await paperTradingExecutor.execute(opportunity);
+        }
       }
 
       // Expire old opportunities
