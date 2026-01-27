@@ -105,3 +105,148 @@ CREATE INDEX IF NOT EXISTS idx_markets_category ON markets(category);
 CREATE INDEX IF NOT EXISTS idx_snapshots_market_id ON market_snapshots(market_id);
 CREATE INDEX IF NOT EXISTS idx_snapshots_timestamp ON market_snapshots(timestamp);
 CREATE INDEX IF NOT EXISTS idx_clusters_market_id ON trade_clusters(market_id);
+
+-- ============================================================
+-- ARBITRAGE TRACKING TABLES
+-- ============================================================
+
+-- Market relationships for cross/related market detection
+CREATE TABLE IF NOT EXISTS market_relationships (
+    id SERIAL PRIMARY KEY,
+    market1_id VARCHAR(255) NOT NULL,
+    market2_id VARCHAR(255) NOT NULL,
+    relationship_type VARCHAR(50) NOT NULL, -- 'same_event', 'inverse', 'subset', 'superset', 'mutex'
+    similarity_score DECIMAL(5, 4) NOT NULL,
+    confidence DECIMAL(5, 4) NOT NULL,
+    detected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_valid BOOLEAN DEFAULT true,
+    notes TEXT,
+    UNIQUE(market1_id, market2_id, relationship_type)
+);
+
+-- Arbitrage opportunities detected
+CREATE TABLE IF NOT EXISTS arbitrage_opportunities (
+    id SERIAL PRIMARY KEY,
+    opportunity_type VARCHAR(50) NOT NULL, -- 'multi_outcome', 'cross_market', 'related_market'
+
+    -- Primary market info
+    market1_id VARCHAR(255) NOT NULL,
+    market1_outcome INTEGER,
+    market1_price DECIMAL(10, 8) NOT NULL,
+    market1_liquidity DECIMAL(20, 2),
+
+    -- Secondary market info (null for multi_outcome type)
+    market2_id VARCHAR(255),
+    market2_outcome INTEGER,
+    market2_price DECIMAL(10, 8),
+    market2_liquidity DECIMAL(20, 2),
+
+    -- Opportunity metrics
+    spread DECIMAL(10, 8) NOT NULL,
+    profit_percent DECIMAL(10, 4) NOT NULL,
+    confidence_score DECIMAL(5, 4) NOT NULL,
+
+    -- Status
+    status VARCHAR(20) DEFAULT 'active', -- 'active', 'executed', 'expired', 'invalid'
+
+    -- Timing
+    detected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP,
+    closed_at TIMESTAMP,
+
+    -- Additional data
+    metadata JSONB
+);
+
+-- Arbitrage executions (both simulated and live)
+CREATE TABLE IF NOT EXISTS arbitrage_executions (
+    id SERIAL PRIMARY KEY,
+    opportunity_id INTEGER NOT NULL REFERENCES arbitrage_opportunities(id),
+
+    -- Execution mode
+    execution_mode VARCHAR(20) NOT NULL, -- 'simulation', 'live'
+
+    -- Leg 1 execution
+    leg1_market_id VARCHAR(255) NOT NULL,
+    leg1_outcome INTEGER NOT NULL,
+    leg1_side VARCHAR(4) NOT NULL, -- 'BUY' or 'SELL'
+    leg1_size DECIMAL(20, 8) NOT NULL,
+    leg1_expected_price DECIMAL(10, 8) NOT NULL,
+    leg1_executed_price DECIMAL(10, 8),
+    leg1_slippage DECIMAL(10, 8),
+    leg1_tx_hash VARCHAR(255),
+    leg1_executed_at TIMESTAMP,
+    leg1_status VARCHAR(20) DEFAULT 'pending',
+
+    -- Leg 2 execution (null for multi_outcome with single market)
+    leg2_market_id VARCHAR(255),
+    leg2_outcome INTEGER,
+    leg2_side VARCHAR(4),
+    leg2_size DECIMAL(20, 8),
+    leg2_expected_price DECIMAL(10, 8),
+    leg2_executed_price DECIMAL(10, 8),
+    leg2_slippage DECIMAL(10, 8),
+    leg2_tx_hash VARCHAR(255),
+    leg2_executed_at TIMESTAMP,
+    leg2_status VARCHAR(20),
+
+    -- Overall execution
+    total_size_usd DECIMAL(20, 2),
+    total_fees DECIMAL(20, 8),
+    gas_cost_usd DECIMAL(10, 4),
+
+    -- P&L tracking
+    expected_profit_usd DECIMAL(20, 8),
+    realized_profit_usd DECIMAL(20, 8),
+    profit_percent DECIMAL(10, 4),
+
+    -- Status
+    status VARCHAR(20) DEFAULT 'pending', -- 'pending', 'partial', 'complete', 'failed', 'cancelled'
+    failure_reason TEXT,
+
+    -- Timing
+    initiated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMP
+);
+
+-- Daily P&L aggregation for tracking
+CREATE TABLE IF NOT EXISTS arbitrage_pnl_daily (
+    id SERIAL PRIMARY KEY,
+    date DATE NOT NULL,
+    execution_mode VARCHAR(20) NOT NULL,
+
+    -- Counts
+    opportunities_detected INTEGER DEFAULT 0,
+    executions_attempted INTEGER DEFAULT 0,
+    executions_successful INTEGER DEFAULT 0,
+
+    -- Volumes
+    total_volume_usd DECIMAL(20, 2) DEFAULT 0,
+
+    -- P&L
+    gross_profit_usd DECIMAL(20, 8) DEFAULT 0,
+    total_fees_usd DECIMAL(20, 8) DEFAULT 0,
+    total_gas_usd DECIMAL(20, 8) DEFAULT 0,
+    net_profit_usd DECIMAL(20, 8) DEFAULT 0,
+
+    -- By type breakdown
+    multi_outcome_profit DECIMAL(20, 8) DEFAULT 0,
+    cross_market_profit DECIMAL(20, 8) DEFAULT 0,
+    related_market_profit DECIMAL(20, 8) DEFAULT 0,
+
+    -- Risk metrics
+    max_drawdown_usd DECIMAL(20, 8) DEFAULT 0,
+
+    UNIQUE(date, execution_mode)
+);
+
+-- Indexes for arbitrage tables
+CREATE INDEX IF NOT EXISTS idx_arb_opps_status ON arbitrage_opportunities(status);
+CREATE INDEX IF NOT EXISTS idx_arb_opps_detected ON arbitrage_opportunities(detected_at);
+CREATE INDEX IF NOT EXISTS idx_arb_opps_type ON arbitrage_opportunities(opportunity_type);
+CREATE INDEX IF NOT EXISTS idx_arb_opps_market1 ON arbitrage_opportunities(market1_id);
+CREATE INDEX IF NOT EXISTS idx_arb_exec_opp_id ON arbitrage_executions(opportunity_id);
+CREATE INDEX IF NOT EXISTS idx_arb_exec_status ON arbitrage_executions(status);
+CREATE INDEX IF NOT EXISTS idx_arb_exec_mode ON arbitrage_executions(execution_mode);
+CREATE INDEX IF NOT EXISTS idx_arb_pnl_date ON arbitrage_pnl_daily(date);
+CREATE INDEX IF NOT EXISTS idx_market_rel_markets ON market_relationships(market1_id, market2_id);
