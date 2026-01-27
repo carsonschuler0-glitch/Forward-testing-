@@ -215,7 +215,10 @@ class ArbitrageRunner {
    * Log an opportunity to console
    */
   private logOpportunity(opp: ArbitrageOpportunity): void {
-    const typeLabel = {
+    // Check for NegRisk subtype
+    const isNegRisk = (opp as any).subType === 'negrisk';
+
+    const typeLabel = isNegRisk ? 'NEGRISK' : {
       multi_outcome: 'MULTI-OUTCOME',
       cross_market: 'CROSS-MARKET',
       related_market: 'RELATED-MARKET',
@@ -223,13 +226,21 @@ class ArbitrageRunner {
 
     console.log(`\n📊 ${typeLabel} OPPORTUNITY`);
     console.log(`   Profit: ${opp.profitPercent.toFixed(2)}% | Confidence: ${(opp.confidenceScore * 100).toFixed(0)}%`);
-    console.log(`   Market 1: ${opp.market1Question.substring(0, 60)}...`);
-    console.log(`   Price: ${(opp.market1Price * 100).toFixed(1)}% | Liquidity: $${opp.market1Liquidity.toFixed(0)}`);
 
-    if (opp.type !== 'multi_outcome') {
-      const opp2 = opp as any;
-      console.log(`   Market 2: ${opp2.market2Question.substring(0, 60)}...`);
-      console.log(`   Price: ${(opp2.market2Price * 100).toFixed(1)}% | Liquidity: $${opp2.market2Liquidity.toFixed(0)}`);
+    if (isNegRisk) {
+      const negRisk = opp as any;
+      console.log(`   Event: ${negRisk.eventTitle || 'Unknown'}`);
+      console.log(`   Conditions: ${negRisk.conditions?.length || 0} | Sum: ${(negRisk.totalYesPriceSum * 100).toFixed(1)}%`);
+      console.log(`   Direction: ${negRisk.direction} | Min Liquidity: $${negRisk.minConditionLiquidity?.toFixed(0)}`);
+    } else {
+      console.log(`   Market 1: ${opp.market1Question.substring(0, 60)}...`);
+      console.log(`   Price: ${(opp.market1Price * 100).toFixed(1)}% | Liquidity: $${opp.market1Liquidity.toFixed(0)}`);
+
+      if (opp.type !== 'multi_outcome') {
+        const opp2 = opp as any;
+        console.log(`   Market 2: ${opp2.market2Question.substring(0, 60)}...`);
+        console.log(`   Price: ${(opp2.market2Price * 100).toFixed(1)}% | Liquidity: $${opp2.market2Liquidity.toFixed(0)}`);
+      }
     }
   }
 
@@ -317,6 +328,11 @@ class ArbitrageRunner {
       category: market.category,
       createdAt: market.createdAt,
       endDate: market.endDate,
+      // NegRisk metadata for multi-outcome arbitrage
+      negRisk: market.negRisk,
+      negRiskMarketId: market.negRiskMarketId,
+      eventSlug: market.eventSlug,
+      conditionId: market.conditionId,
     };
   }
 
